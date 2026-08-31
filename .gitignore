@@ -1,0 +1,21 @@
+# Environment & Data
+
+# Python
+__pycache__/
+*.pyc
+*.log
+*.cfg
+*~
+.checkpoints/
+.data/
+.results/
+# Jupyter
+.ipynb_checkpoints/
+
+# Virtual Envs
+venv/
+env/
+env_gpu/
+
+
+
