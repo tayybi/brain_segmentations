@@ -33,6 +33,12 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 @dataclass
 class Config:
+    data_root: Path = Path("/home/tali1/brain_segmentations/data/dataset_split_70_15_15")
+    train_images_dir: Path = data_root / "train" / "images"
+    train_masks_dir: Path = data_root / "train" / "masks"
+    val_images_dir: Path = data_root / "val" / "images"
+    val_masks_dir: Path = data_root / "val" / "masks"
+    checkpoint_path: Path = Path("/home/tali1/brain_segmentations/checkpoints/best_brain_segmentation.pt")
     img_size: int = 256
     patch_size: int = 8
     batch_size: int = 4
@@ -51,7 +57,11 @@ CFG = Config()
 class PairDataset(Dataset):
     def __init__(self, images_dir, masks_dir, img_size=CFG.img_size, augment=False):
         self.images = sorted(
-            [p for p in Path(images_dir).iterdir() if p.suffix.lower() in {".png", ".jpg", ".jpeg", ".tif", ".tiff"}]
+            [
+                p
+                for p in Path(images_dir).iterdir()
+                if p.is_file() and not p.name.startswith(".") and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
+            ]
         )
         self.masks_dir = Path(masks_dir)
         self.img_size = img_size
@@ -240,8 +250,9 @@ def evaluate(model, loader, device):
 
 def main():
     print("Device:", DEVICE)
-    train_ds = PairDataset("/home/tali1/rat_brain_seg/data/new_dataset/train_images", "/home/tali1/rat_brain_seg/data/new_dataset/train_masks", augment=True)
-    val_ds = PairDataset("/home/tali1/rat_brain_seg/data/new_dataset/val_images", "/home/tali1/rat_brain_seg/data/new_dataset/val_masks", augment=False)
+    CFG.checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    train_ds = PairDataset(CFG.train_images_dir, CFG.train_masks_dir, augment=True)
+    val_ds = PairDataset(CFG.val_images_dir, CFG.val_masks_dir, augment=False)
 
     train_loader = DataLoader(train_ds, batch_size=CFG.batch_size, shuffle=True, num_workers=2)
     val_loader = DataLoader(val_ds, batch_size=CFG.batch_size, shuffle=False, num_workers=2)
@@ -255,7 +266,7 @@ def main():
         ]
     )
 
-    best_val = float("inf")
+    best_val_dice = float("-inf")
     no_improve = 0
 
     for epoch in range(1, CFG.epochs + 1):
@@ -263,10 +274,10 @@ def main():
         val_loss, val_dice = evaluate(model, val_loader, DEVICE)
         print(f"Epoch {epoch:02d} | train_loss={train_loss:.4f} | val_loss={val_loss:.4f} | val_dice={val_dice:.4f}")
 
-        if val_loss < best_val:
-            best_val = val_loss
+        if val_dice > best_val_dice:
+            best_val_dice = val_dice
             no_improve = 0
-            torch.save({"state_dict": model.state_dict()}, "best_brain_segmentation.pt")
+            torch.save({"state_dict": model.state_dict(), "val_dice": val_dice, "val_loss": val_loss}, CFG.checkpoint_path)
         else:
             no_improve += 1
 
