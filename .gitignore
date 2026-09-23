@@ -7,7 +7,6 @@ __pycache__/
 *.cfg
 *~
 .DS_Store
-*.pt
 # Jupyter
 .ipynb_checkpoints/
 
@@ -15,5 +14,4 @@ __pycache__/
 venv/
 env/
 env_gpu/
-
 
