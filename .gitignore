@@ -6,6 +6,8 @@ __pycache__/
 *.log
 *.cfg
 *~
+.DS_Store
+*.pt
 .checkpoints/
 .data/
 .results/
@@ -16,6 +18,5 @@ __pycache__/
 venv/
 env/
 env_gpu/
-
 
 

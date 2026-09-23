@@ -136,3 +136,15 @@ This gives a meaningful improvement without rewriting the entire project.
 - [model_vit_unet_v2.ipynb](model_vit_unet_v2.ipynb)
 - [data](data)
 - [checkpoints](checkpoints)
+
+## Hybrid SSL Follow-on Study
+
+`run_hybrid_ssl_study.py` implements the new paper's 2.5D hybrid CNN-Transformer experiment. It reconstructs masked training slices during SSL pretraining, then predicts each center-slice mask from its preceding, center, and following MRI slices. The test and validation animals are excluded from pretraining.
+
+The experiment design and commands are in [experiment_protocol.md](experiment_protocol.md). Start the SSL-pretrained model with:
+
+```bash
+python run_hybrid_ssl_study.py full --output-dir experiments/hybrid_mae_seed1 --seed 1
+```
+
+See [model_architecture.md](model_architecture.md) for diagrams of the from-scratch and SSL-pretrained experiments.
