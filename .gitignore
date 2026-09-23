@@ -8,9 +8,6 @@ __pycache__/
 *~
 .DS_Store
 *.pt
-.checkpoints/
-.data/
-.results/
 # Jupyter
 .ipynb_checkpoints/
 
