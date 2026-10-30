@@ -27,11 +27,6 @@ results/label_prop_examples/*.npz
 data/Mice_study_sample/
 experiments/*.sweep.out
 
-# Local working copies: figure script output (copied into paper_isbi2027/figures),
-# draft backups, build files and figures the paper no longer uses
-results/figures/
+# Local working copies: draft backups and build files
 paper_isbi2027/main_v*.tex
 paper_isbi2027/main.blg
-paper_isbi2027/figures/fig_method_comparison.pdf
-paper_isbi2027/figures/fig_per_animal_gain.pdf
-paper_isbi2027/figures/fig_pseudo_label_quality.pdf
