@@ -15,3 +15,15 @@ venv/
 env/
 env_gpu/
 
+
+.venv_sam2/
+checkpoints/sam2/
+.venv_nnunet/
+
+# Large or regenerable outputs (nnU-Net models, SAM2 labels, raw archive sample)
+nnunet/
+results/*.npz
+results/label_prop_examples/*.npz
+data/Mice_study_sample/
+experiments/*.sweep.out
+experiments/meta_ssl_INVALID_inverted_masks_A/

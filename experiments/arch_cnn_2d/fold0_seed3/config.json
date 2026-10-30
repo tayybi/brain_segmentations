@@ -1,0 +1,49 @@
+{
+  "data_root": "/home/tali1/brain_segmentations/data/dataset_split_70_15_15",
+  "output_dir": "experiments/arch_cnn_2d/fold0_seed3",
+  "fold": 0,
+  "seed": 3,
+  "image_size": 256,
+  "batch_size": 8,
+  "ssl_steps": 4000,
+  "ssl_lr": 0.0005,
+  "ema": 0.996,
+  "smooth_weight": 1.0,
+  "steps": 8000,
+  "lr": 0.0003,
+  "weight_decay": 0.0001,
+  "eval_every": 500,
+  "mixer": "cnn",
+  "context": "2d",
+  "train": [
+    "2c",
+    "4c",
+    "5c",
+    "6c",
+    "8c",
+    "9c",
+    "10c",
+    "21c",
+    "24c",
+    "25c",
+    "26c",
+    "27c",
+    "28c",
+    "30c"
+  ],
+  "val": [
+    "3c",
+    "22c"
+  ],
+  "test": [
+    "1c",
+    "7c",
+    "23c",
+    "29c"
+  ],
+  "variants": [
+    "scratch",
+    "M",
+    "ABCD"
+  ]
+}

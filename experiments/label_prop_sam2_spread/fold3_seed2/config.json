@@ -1,0 +1,43 @@
+{
+  "data_root": "/home/tali1/brain_segmentations/data/dataset_split_70_15_15",
+  "output_dir": "experiments/label_prop_sam2_spread/fold3_seed2",
+  "fold": 3,
+  "seed": 2,
+  "image_size": 256,
+  "batch_size": 8,
+  "steps": 8000,
+  "lr": 0.0003,
+  "weight_decay": 0.0001,
+  "eval_every": 500,
+  "reg_steps": 4000,
+  "reg_lr": 0.0003,
+  "smooth_weight": 1.0,
+  "anchor_weight": 1.0,
+  "anchor_layout": "spread",
+  "train": [
+    "1c",
+    "2c",
+    "3c",
+    "4c",
+    "5c",
+    "7c",
+    "9c",
+    "22c",
+    "23c",
+    "25c",
+    "26c",
+    "27c",
+    "29c",
+    "30c"
+  ],
+  "val": [
+    "6c",
+    "28c"
+  ],
+  "test": [
+    "8c",
+    "10c",
+    "21c",
+    "24c"
+  ]
+}

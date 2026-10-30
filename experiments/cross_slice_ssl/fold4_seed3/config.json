@@ -1,0 +1,51 @@
+{
+  "data_root": "/home/tali1/brain_segmentations/data/dataset_split_70_15_15",
+  "output_dir": "experiments/cross_slice_ssl/fold4_seed3",
+  "fold": 4,
+  "seed": 3,
+  "image_size": 256,
+  "batch_size": 8,
+  "ssl_steps": 4000,
+  "ssl_lr": 0.0005,
+  "ema": 0.996,
+  "smooth_weight": 1.0,
+  "steps": 8000,
+  "lr": 0.0003,
+  "weight_decay": 0.0001,
+  "eval_every": 500,
+  "train": [
+    "3c",
+    "4c",
+    "5c",
+    "7c",
+    "8c",
+    "9c",
+    "10c",
+    "21c",
+    "22c",
+    "24c",
+    "25c",
+    "26c",
+    "27c",
+    "29c"
+  ],
+  "val": [
+    "1c",
+    "23c"
+  ],
+  "test": [
+    "6c",
+    "2c",
+    "28c",
+    "30c"
+  ],
+  "variants": [
+    "scratch",
+    "M",
+    "A",
+    "B",
+    "C",
+    "D",
+    "ABCD"
+  ]
+}
