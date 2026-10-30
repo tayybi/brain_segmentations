@@ -27,3 +27,26 @@ results/label_prop_examples/*.npz
 data/Mice_study_sample/
 experiments/*.sweep.out
 experiments/meta_ssl_INVALID_inverted_masks_A/
+
+# Paper 1 material and earlier project phases (kept locally, not part of this study)
+data/masked_sweeps/
+data/dataset_split_70_10_20/
+Improving_Mice_Brain_MRI_Segmentation_via_Self_Supervised_Learning.pdf
+improved_segmentation_pipeline.py
+model_vit_unet_v2.ipynb
+utils/
+run_hybrid_ssl_study.py
+experiments/hybrid_*/
+experiments/meta_ssl/
+paper_draft.md
+paper_enhancement_plan.md
+experiment_tracker.md
+experiment_protocol.md
+model_architecture.md
+results/figures/
+paper_isbi2027/main_v*.tex
+paper_isbi2027/main.blg
+paper_isbi2027/figures/fig_method_comparison.pdf
+paper_isbi2027/figures/fig_per_animal_gain.pdf
+paper_isbi2027/figures/fig_pseudo_label_quality.pdf
+.DS_Store

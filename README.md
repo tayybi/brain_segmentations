@@ -1,150 +1,58 @@
-# Mouse Brain Extraction v2 - Enhancement Roadmap
+# One Annotated Slice per Mouse Suffices
 
-This folder already contains a strong baseline built around a ViT + decoder segmentation pipeline. The next step is to turn it into a more reliable, reproducible, and production-ready pipeline.
+Code, per-mouse results and paper source for *One Annotated Slice per Mouse Suffices:
+Label Propagation for Brain Extraction in Preclinical MRI* (ISBI 2027, in preparation).
 
-## Current strengths
+We ask how few manually outlined slices per mouse are needed to train a brain extraction
+network when the remaining slices receive automatically propagated labels. With one
+annotated slice per training mouse (9% of slices) and labels propagated by a frozen SAM2,
+the trained network is non-inferior to full annotation at a margin of 0.01 Dice
+(0.950 vs 0.946; nnU-Net 0.958 vs 0.960).
 
-- ViT backbone with masked image modeling (MIM) pretraining
-- Decoder with UNet-like upsampling
-- Augmentation for training stability
-- Dice and BCE-based loss options
-- Early stopping and checkpoint saving
+## Data
 
-## High-impact improvements to implement next
+`data/dataset_split_70_15_15/` holds 20 mice (218 slices, 9.4 T Bruker, T1/T2-weighted)
+with expert brain masks, in two cohorts: 1c–10c at 256×256 and 21c–30c at 200×200.
+The folder names come from an older split; the code pools all mice and builds its own
+five-fold animal-level split, stratified by cohort (`make_split` in `run_meta_ssl_study.py`).
 
-### 1. Move from notebook code to a modular training script
+## Code
 
-The current model is embedded in a notebook, which makes iteration slow and hard to reproduce. Split the pipeline into:
+| File | Purpose |
+|---|---|
+| `run_label_propagation_study.py` | Main study: anchors, propagators (copy, interpolation, self-training, registration, SAM2), agreement filtering, training and scoring |
+| `run_meta_ssl_study.py` | Shared data loading, splits, 2.5D CNN–Transformer network and metrics |
+| `run_cross_slice_ssl_study.py` | Self-supervised pretraining (masked modelling and cross-slice objectives) |
+| `scripts/sam2_propagate.py` | SAM2.1 propagation of the annotated slices through each mouse (separate environment) |
+| `scripts/nnunet_baseline.py`, `scripts/launch_nnunet.sh` | nnU-Net v2 baseline (separate environment, `nnUNet_compile=f`) |
+| `scripts/launch_*_sweep.sh` | Run every fold × seed in parallel on the GPUs |
+| `scripts/summarize_label_prop.py` | Per-mouse means, label quality and paired tests |
+| `scripts/make_*_figure*.py` | Paper figures |
 
-- data loading
-- model definition
-- training loop
-- validation metrics
-- inference utilities
-
-This makes it easier to compare experiments and keep checkpoints organized.
-
-### 2. Improve loss design for brain masks
-
-Brain extraction is a class-imbalanced binary segmentation problem. Use:
-
-- BCE + Dice loss as the default baseline
-- Focal + Dice loss for harder boundary cases
-- optional Lovasz loss or Tversky loss if false positives remain high
-
-A good starting point is to keep BCE + Dice as the main loss while monitoring Dice, IoU, and precision/recall.
-
-### 3. Add stronger augmentation and preprocessing
-
-The current pipeline already includes flips and rotation. Expand it with:
-
-- elastic deformation
-- small intensity jitter
-- CLAHE or histogram normalization
-- random brightness/contrast
-- center-crop + resize consistency for anatomy alignment
-
-This is especially helpful for mouse brain images where shape and contrast can vary substantially.
-
-### 4. Use a more robust decoder
-
-The current decoder is acceptable, but there are a few improvements worth exploring:
-
-- skip connections from early ViT feature maps
-- ConvNeXt or Swin backbone instead of plain ViT
-- U-Net style feature fusion from multiple resolutions
-- residual blocks in decoder
-
-The best upgrade path is to compare:
-
-1. ViT + simple UNet decoder
-2. ViT + residual decoder
-3. Swin Transformer + U-Net decoder
-4. ConvNeXt + segmentation head
-
-### 5. Add better validation and model selection
-
-Use validation metrics beyond loss:
-
-- Dice score
-- IoU
-- precision
-- recall
-- Hausdorff distance on boundary regions
-
-Keep the checkpoint with the best validation Dice, not only the lowest loss. This is important for small anatomical structures and boundary precision.
-
-### 6. Add inference-time improvements
-
-The notebook already includes a simple horizontal flip TTA. Extend that to:
-
-- flip in both axes
-- multi-scale inference
-- threshold tuning on validation set
-- morphological cleanup after prediction
-
-For brain extraction, post-processing with connected-component filtering is often useful.
-
-### 7. Add dataset quality checks
-
-Before training, verify:
-
-- all images and masks align
-- mask values are binary
-- image dimensions match expected size
-- annotations are not empty or corrupted
-- no train/val leakage across slices or animals
-
-These checks prevent biased results and clean training instability.
-
-### 8. Add experiment tracking
-
-Track:
-
-- hyperparameters
-- train loss and validation loss curves
-- dice per epoch
-- best checkpoint path
-- GPU/CPU runtime
-
-A simple CSV or TensorBoard logging setup is enough for a strong improvement.
-
-## Recommended enhancement order
-
-1. Refactor the notebook into a Python training script
-2. Add BCE + Dice + improved validation metrics
-3. Add stronger augmentation and preprocessing
-4. Add TTA and post-processing for inference
-5. Compare ViT vs Swin/ConvNeXt backbone
-6. Add ablation studies to justify the final model
-
-## Suggested next target
-
-The most realistic next upgrade is:
-
-- keep the current ViT backbone
-- strengthen the decoder with residual blocks and skip connections
-- use BCE + Dice loss
-- improve augmentation
-- evaluate with Dice + IoU + boundary metrics
-- add TTA and connected-component filtering at inference
-
-This gives a meaningful improvement without rewriting the entire project.
-
-## Files of interest
-
-- [model_vit_unet_v2.ipynb](model_vit_unet_v2.ipynb)
-- [data](data)
-- [checkpoints](checkpoints)
-
-## Hybrid SSL Follow-on Study
-
-`run_hybrid_ssl_study.py` implements the new paper's 2.5D hybrid CNN-Transformer experiment. It reconstructs masked training slices during SSL pretraining, then predicts each center-slice mask from its preceding, center, and following MRI slices. The test and validation animals are excluded from pretraining.
-
-The experiment design and commands are in [experiment_protocol.md](experiment_protocol.md). Start the SSL-pretrained model with:
+## Reproducing
 
 ```bash
-python run_hybrid_ssl_study.py full --output-dir experiments/hybrid_mae_seed1 --seed 1
+# SAM2 labels for an anchor layout (quartile, one_mid, two_third, spread)
+.venv_sam2/bin/python scripts/sam2_propagate.py --anchor-layout one_mid
+
+# One fold and seed of the main study
+python run_label_propagation_study.py --fold 0 --seed 1 --anchor-layout one_mid --methods sparse sam2 full
+
+# All folds and seeds; cross-cohort runs use --split A_to_B or B_to_A
+OUT=experiments/label_prop_sam2_one_mid EXTRA="--anchor-layout one_mid --methods sparse sam2" \
+    scripts/launch_label_prop_sweep.sh 8 2
+
+# nnU-Net baseline
+.venv_nnunet/bin/python scripts/nnunet_baseline.py prepare
+scripts/launch_nnunet.sh 8
+.venv_nnunet/bin/python scripts/nnunet_baseline.py score
 ```
 
-See [model_architecture.md](model_architecture.md) for diagrams of the from-scratch and SSL-pretrained experiments.
+## Results
+
+`experiments/<study>/fold<k>_seed<s>/metrics.csv` holds per-mouse test scores for every run,
+and `experiments/RESULTS_SUMMARY.md` maps each number in the paper to its folder.
+The paper source is in `paper_isbi2027/` (`main.tex`, figures in `figures/`).
+
+Not in the repository (large or regenerable): SAM2 label files (`results/*.npz`),
+nnU-Net models and model checkpoints.
