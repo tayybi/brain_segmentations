@@ -13,7 +13,8 @@ the trained network is non-inferior to full annotation at a margin of 0.01 Dice
 
 `data/dataset_split_70_15_15/` holds 20 mice (218 slices, 9.4 T Bruker, T1/T2-weighted)
 with expert brain masks, in two cohorts: 1c–10c at 256×256 and 21c–30c at 200×200.
-The folder names come from an older split; the code pools all mice and builds its own
+`data/dataset_split_70_10_20/` holds the same 218 slices in an earlier 70/10/20 split.
+The code reads only `dataset_split_70_15_15`, pools all its mice and builds its own
 five-fold animal-level split, stratified by cohort (`make_split` in `run_meta_ssl_study.py`).
 
 ## Code
