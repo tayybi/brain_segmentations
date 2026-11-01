@@ -1,0 +1,121 @@
+{
+  "data_root": "/home/apokhre2/brain_segmentation/data/dataset_split_70_15_15",
+  "output_dir": "/home/apokhre2/brain_segmentation/experiments/cohort_adaptation/B_to_A_seed3",
+  "split": "B_to_A",
+  "seed": 3,
+  "image_size": 256,
+  "batch_size": 8,
+  "steps": 8000,
+  "lr": 0.0003,
+  "weight_decay": 0.0001,
+  "eval_every": 500,
+  "ft_steps": 2000,
+  "ft_lr": 0.0001,
+  "sam2_file": "results/sam2_pseudo_one_mid.npz",
+  "source_train": [
+    "21c",
+    "22c",
+    "23c",
+    "24c",
+    "25c",
+    "26c",
+    "27c",
+    "28c"
+  ],
+  "source_val": [
+    "29c",
+    "30c"
+  ],
+  "k": [
+    2,
+    4,
+    8
+  ],
+  "methods": [
+    "ft_anchor",
+    "ft_sam2",
+    "ft_full"
+  ],
+  "target_folds": [
+    {
+      "test": [
+        "9c",
+        "7c"
+      ],
+      "pool": [
+        "5c",
+        "4c",
+        "3c",
+        "6c",
+        "1c",
+        "10c",
+        "8c",
+        "2c"
+      ]
+    },
+    {
+      "test": [
+        "5c",
+        "4c"
+      ],
+      "pool": [
+        "3c",
+        "6c",
+        "1c",
+        "10c",
+        "8c",
+        "2c",
+        "9c",
+        "7c"
+      ]
+    },
+    {
+      "test": [
+        "3c",
+        "6c"
+      ],
+      "pool": [
+        "1c",
+        "10c",
+        "8c",
+        "2c",
+        "9c",
+        "7c",
+        "5c",
+        "4c"
+      ]
+    },
+    {
+      "test": [
+        "1c",
+        "10c"
+      ],
+      "pool": [
+        "8c",
+        "2c",
+        "9c",
+        "7c",
+        "5c",
+        "4c",
+        "3c",
+        "6c"
+      ]
+    },
+    {
+      "test": [
+        "8c",
+        "2c"
+      ],
+      "pool": [
+        "9c",
+        "7c",
+        "5c",
+        "4c",
+        "3c",
+        "6c",
+        "1c",
+        "10c"
+      ]
+    }
+  ]
+}

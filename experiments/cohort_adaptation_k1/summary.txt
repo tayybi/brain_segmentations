@@ -1,0 +1,14 @@
+
+A_to_B  (10 target mice, seeds: 3)
+   k method       Dice   HD95   vs ft_anchor   vs ft_full (non-inf, 0.01)
+   0 source      0.930   11.8
+   1 ft_anchor   0.932   11.3
+   1 ft_sam2     0.937   11.0   p=0.064 (7/10 better)   p=0.001
+   1 ft_full     0.930   10.5
+
+B_to_A  (10 target mice, seeds: 3)
+   k method       Dice   HD95   vs ft_anchor   vs ft_full (non-inf, 0.01)
+   0 source      0.804   33.3
+   1 ft_anchor   0.859   25.2
+   1 ft_sam2     0.910   17.8   p=0.002 (10/10 better)   p=0.001
+   1 ft_full     0.910   17.6
