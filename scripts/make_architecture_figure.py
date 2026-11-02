@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
-"""Architecture/pipeline figure for the ISBI paper (PNG at 300 dpi + PDF) in
-results/figures/fig_architecture. Thumbnails come from training mouse 2c
-(results/label_prop_examples/fold0_seed1.npz and results/sam2_pseudo_quartile.npz)."""
+"""Architecture/pipeline figure for the ISBI paper (PNG at 600 dpi + PDF).
+
+results/figures/fig_architecture has panels (a)-(c); fig_architecture_adapt adds
+panel (d), adaptation to a new protocol, and is also copied to paper_isbi2027/figures.
+Thumbnails come from training mouse 2c and, in (d), mouse 7c of the 256x256 cohort
+(results/label_prop_examples/fold0_seed1.npz and results/sam2_pseudo_one_mid.npz).
+Panel (d) numbers: experiments/cohort_adaptation/summary.txt (B_to_A)."""
+
+import shutil
 
 from pathlib import Path
 
@@ -19,8 +25,9 @@ SAM2 = ROOT / "results" / "sam2_pseudo_one_mid.npz"
 INK, MUTED, LINE, FILL = "#0b0b0b", "#52514e", "#b9b7b1", "#f4f3f0"
 ANCHOR, PROP, NET, WARN = "#1baf7a", "#2a78d6", "#6250d6", "#c2410c"
 ANIMAL, TEST, ANCHORS, SHOWN = "2c", "1c", [5], [0, 3, 10]
+NEW = "7c"  # new-protocol mouse in panel (d): the 256x256 cohort, target of the B_to_A example
 
-plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 6.5, "savefig.dpi": 300, "savefig.bbox": "tight"})
+plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 6.5, "savefig.dpi": 600, "savefig.bbox": "tight"})
 
 
 def box(ax, x, y, w, h, fc=FILL, ec=LINE, lw=0.7, ls="-", r=1.2):
@@ -51,13 +58,13 @@ def label(ax, x, y, text, size=6.5, color=INK, weight="normal", ha="center", va=
     ax.text(x, y, text, fontsize=size, color=color, weight=weight, ha=ha, va=va, zorder=5, **kw)
 
 
-def main():
-    data, sam2 = np.load(EXAMPLES), np.load(SAM2)
+def make(data, sam2, adapt):
     images, truth, probs = data[f"{ANIMAL}_image"], data[f"{ANIMAL}_truth"], sam2[ANIMAL]
     n = len(images)
 
-    fig, ax = plt.subplots(figsize=(7.0, 3.9))
-    ax.set_xlim(0, 100); ax.set_ylim(0, 55.7); ax.set_aspect("equal"); ax.axis("off")
+    bottom = -16.0 if adapt else 0
+    fig, ax = plt.subplots(figsize=(7.0, 3.9 * (55.7 - bottom) / 55.7))
+    ax.set_xlim(0, 100); ax.set_ylim(bottom, 55.7); ax.set_aspect("equal"); ax.axis("off")
     title = dict(size=6.8, weight="bold", ha="left")
 
     # (a) Training labels -------------------------------------------------------------
@@ -144,11 +151,57 @@ def main():
     arrow(ax, (87.8, yc), (89.4, yc))
     thumb(ax, test_images[5], 89.6, yc - 4.0, 8.0, test_pred[5], NET)
     label(ax, 93.6, 3.0, "brain mask", size=5.0, color=MUTED)
+    if adapt:
+        adaptation_panel(ax, data, title)
+    return fig
 
+
+def adaptation_panel(ax, data, title):
+    """(d) Fine-tuning the trained network on a new protocol from one slice per new mouse."""
+    box(ax, 0, -15.6, 100, 13.8, fc="none")
+    label(ax, 1.2, -3.7, "(d) New acquisition protocol: one annotated slice per new mouse adapts the network", **title)
+    yc = -9.9
+
+    box(ax, 1.5, yc - 3.6, 15.5, 7.2, fc="white", ec=NET, lw=0.9)
+    label(ax, 9.25, yc + 1.4, "network (b)", size=5.8, weight="bold")
+    label(ax, 9.25, yc - 1.4, "trained on the\nother protocol", size=5.0, color=MUTED, linespacing=1.2)
+    arrow(ax, (17.3, yc), (19.3, yc))
+
+    images, truth = data[f"{NEW}_image"], data[f"{NEW}_truth"]
+    middle = len(images) // 2
+    thumb(ax, images[middle], 19.5, yc - 3.7, 7.4, truth[middle], ANCHOR, frame=ANCHOR)
+    label(ax, 28.4, yc + 2.6, "1 slice drawn per new mouse", size=5.4, color=ANCHOR, ha="left")
+    label(ax, 28.4, yc + 0.9, "+ SAM2 labels the rest", size=5.4, color=PROP, ha="left")
+    n = len(images)
+    slice_strip(ax, 28.4, yc - 1.9, n, [ANCHOR if i == middle else PROP for i in range(n)], cell=1.4)
+    label(ax, 28.4, yc - 3.6, "k = 1, 2, 4 or 8 new mice", size=5.0, color=MUTED, ha="left")
+    arrow(ax, (49.6, yc), (51.6, yc))
+
+    box(ax, 51.8, yc - 3.6, 16.5, 7.2, fc="white", ec=NET, lw=0.9)
+    label(ax, 60.05, yc + 1.4, "fine-tune", size=5.8, weight="bold")
+    label(ax, 60.05, yc - 1.4, "2000 iterations,\nhalf source / half new", size=5.0, color=MUTED, linespacing=1.2)
+    arrow(ax, (68.6, yc), (70.6, yc))
+
+    x = 85.0
+    label(ax, x, -6.0, "Dice on new-protocol mice, k = 2", size=4.9, color=MUTED)
+    label(ax, x, -8.3, "0.806 → 0.928", size=8.4, weight="bold")
+    label(ax, x, -10.6, "= fully annotated new mice (0.928)", size=5.2, weight="bold", color=PROP)
+    label(ax, x, -12.3, "same slices without SAM2: 0.866", size=5.0, color=WARN)
+    label(ax, x, -14.0, "k = 8: 0.948 (all slices 0.951)", size=4.9, color=MUTED)
+
+
+def main():
+    data, sam2 = np.load(EXAMPLES), np.load(SAM2)
     OUT.mkdir(parents=True, exist_ok=True)
+    for name, adapt in (("fig_architecture", False), ("fig_architecture_adapt", True)):
+        fig = make(data, sam2, adapt)
+        for suffix in ("png", "pdf"):
+            fig.savefig(OUT / f"{name}.{suffix}")
+        plt.close(fig)
+        print("saved", OUT / f"{name}.pdf")
+    paper = ROOT / "paper_isbi2027" / "figures"
     for suffix in ("png", "pdf"):
-        fig.savefig(OUT / f"fig_architecture.{suffix}")
-    print("saved", OUT / "fig_architecture.pdf")
+        shutil.copy(OUT / f"fig_architecture_adapt.{suffix}", paper / f"fig_architecture_adapt.{suffix}")
 
 
 if __name__ == "__main__":

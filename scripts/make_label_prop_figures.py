@@ -3,11 +3,14 @@
 results/figures/. Quantitative figures read experiments/label_prop; the
 qualitative figure needs results/label_prop_examples/fold0_seed1.npz."""
 
+import shutil
 from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 
@@ -26,7 +29,7 @@ NAMES = {"sparse": "Anchors only", "copy": "+ copy nearest", "sdf": "+ shape int
 
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "xtick.color": MUTED,
                      "ytick.color": MUTED, "axes.spines.top": False, "axes.spines.right": False, "axes.linewidth": 0.6,
-                     "xtick.major.width": 0.6, "ytick.major.width": 0.6, "savefig.dpi": 300, "savefig.bbox": "tight"})
+                     "xtick.major.width": 0.6, "ytick.major.width": 0.6, "savefig.dpi": 600, "savefig.bbox": "tight"})
 
 
 def save(fig, name):
@@ -108,52 +111,64 @@ def per_animal_gain(per_animal):
 
 
 def qualitative():
-    """End slices of four training mice (two per cohort) in fold 0: propagated labels
-    from three anchors (copy, self-training, registration + agreement, SAM2) and SAM2
-    from the middle slice only."""
+    """End slices of three training mice in fold 0, beyond the outermost anchor, with the
+    same crop in every column: two where SAM2 succeeds and the others fail (one per
+    cohort) and one where SAM2 fails. Interpolation, registration (anchor loss, no
+    agreement filter; scripts/make_registration_example.py) and SAM2 use three anchors;
+    the last column is SAM2 from the middle slice only. Also copied to
+    paper_isbi2027/figures."""
     if not EXAMPLES.exists():
         print(f"skip qualitative figure: {EXAMPLES} not found")
         return
     data, sam2_3, sam2_1 = np.load(EXAMPLES), np.load(SAM2), np.load(SAM2.with_name("sam2_pseudo_one_mid.npz"))
-    rows = [("2c", 0), ("9c", -1), ("21c", 0), ("27c", -1)]
-    columns = [("copy", "Copy"), ("self_train", "Self-train."), ("reg_teacher", "Reg. + agr."), ("sam2_3", "SAM2, 3 sl."), ("sam2_1", "SAM2, 1 sl.")]
-    fig, axes = plt.subplots(len(rows), len(columns) + 1, figsize=(3.45, 0.62 * len(rows) + 0.2), gridspec_kw={"wspace": 0.03, "hspace": 0.04})
-    for r, (animal, index) in enumerate(rows):
+    registration = np.load(EXAMPLES.with_name("fold0_seed1_reg_anchor.npz"))
+    # (mouse, slice, row label): Mouse 1 = 10c (256x256 cohort), Mouse 2 = 30c and Mouse 3 = 21c (200x200 cohort).
+    rows = [("10c", 0, "Mouse 1\n(256²)"), ("30c", -1, "Mouse 2\n(200²)"), ("21c", -1, "Mouse 3\n(200²)")]
+    columns = [("sdf", "Shape\ninterp."), ("reg_anchor", "Regis-\ntration"), ("sam2_3", "SAM2\n3 slices"), ("sam2_1", "SAM2\n1 slice")]
+    truth_colour, fp, fn = "#1baf7a", [0.89, 0.15, 0.15, 0.6], [0.98, 0.70, 0.0, 0.7]
+    fig, axes = plt.subplots(len(rows), len(columns) + 1, figsize=(3.1, 0.565 * len(rows) + 0.45),
+                             gridspec_kw={"wspace": 0.04, "hspace": 0.05})
+    for r, (animal, index, note) in enumerate(rows):
         images, truth = data[f"{animal}_image"], data[f"{animal}_truth"] > 0.5
         i = index % len(images)
-        maps = {"sam2_3": (sam2_3[animal][i] > 0.5, None), "sam2_1": (sam2_1[animal][i] > 0.5, None)}
-        for method in ("copy", "self_train", "reg_teacher"):
-            maps[method] = (data[f"{animal}_pseudo_{method}"][i] > 0.5, data[f"{animal}_ignored_{method}"][i] > 0)
-        # Square crop around the true brain and every label, so leaks stay visible.
-        union = truth[i] | np.any([m for m, _ in maps.values()], 0)
+        maps = {"sdf": data[f"{animal}_pseudo_sdf"][i] > 0.5, "reg_anchor": registration[f"{animal}_pseudo_reg_anchor"][i] > 0.5,
+                "sam2_3": sam2_3[animal][i] > 0.5, "sam2_1": sam2_1[animal][i] > 0.5}
+        # One square crop per row around the true brain and every label, so leaks stay visible.
+        union = truth[i] | np.any(list(maps.values()), 0)
         ys, xs = np.nonzero(union)
-        cy, cx, half = (ys.min() + ys.max()) // 2, (xs.min() + xs.max()) // 2, max(ys.ptp(), xs.ptp()) // 2 + 12
+        cy, cx, half = (ys.min() + ys.max()) // 2, (xs.min() + xs.max()) // 2, max(np.ptp(ys), np.ptp(xs)) // 2 + 12
         y0, x0 = np.clip([cy - half, cx - half], 0, 256 - 2 * half)
         crop = lambda a: a[y0:y0 + 2 * half, x0:x0 + 2 * half]
         axes[r, 0].imshow(crop(images[i]), cmap="gray", vmin=0, vmax=1)
-        axes[r, 0].contour(crop(truth[i]), levels=[0.5], colors=["#1baf7a"], linewidths=0.6)
-        axes[r, 0].set_ylabel(f"{animal}, sl. {i}", fontsize=5.5, color=INK, labelpad=1)
+        axes[r, 0].contour(crop(truth[i]), levels=[0.5], colors=[truth_colour], linewidths=1.1)
+        axes[r, 0].set_ylabel(note, fontsize=5.6, color=INK, labelpad=2, linespacing=1.15)
         for c, (method, title) in enumerate(columns, start=1):
-            pseudo, ignored = maps[method]
-            ignored = np.zeros_like(pseudo) if ignored is None else ignored
-            dice = 2 * (pseudo & truth[i]).sum() / max(pseudo.sum() + truth[i].sum(), 1)
-            overlay = np.zeros((*pseudo.shape, 4))
-            overlay[pseudo & ~truth[i] & ~ignored] = [0.89, 0.29, 0.28, 0.75]   # false positive
-            overlay[~pseudo & truth[i] & ~ignored] = [0.92, 0.63, 0.0, 0.75]    # false negative
-            overlay[ignored] = [0.6, 0.6, 0.6, 0.55]
+            label = maps[method]
+            dice = 2 * (label & truth[i]).sum() / max(label.sum() + truth[i].sum(), 1)
+            overlay = np.zeros((*label.shape, 4))
+            overlay[label & ~truth[i]] = fp
+            overlay[~label & truth[i]] = fn
             axes[r, c].imshow(crop(images[i]), cmap="gray", vmin=0, vmax=1)
             axes[r, c].imshow(crop(overlay))
-            axes[r, c].text(0.04, 0.05, f"{dice:.2f}", transform=axes[r, c].transAxes, fontsize=5, color="white",
-                            bbox={"boxstyle": "round,pad=0.15", "fc": "black", "alpha": 0.6, "lw": 0})
+            axes[r, c].contour(crop(truth[i]), levels=[0.5], colors=[truth_colour], linewidths=0.8)
+            axes[r, c].text(0.05, 0.94, f"{dice:.2f}", transform=axes[r, c].transAxes, fontsize=6.5, color="white",
+                            weight="bold", va="top", bbox={"boxstyle": "round,pad=0.18", "fc": "black", "alpha": 0.65, "lw": 0})
             if r == 0:
-                axes[r, c].set_title(title, fontsize=5.5, color=OURS if method.startswith("sam2") else INK, pad=2)
+                axes[r, c].set_title(title, fontsize=6.0, linespacing=1.1, color=OURS if method.startswith("sam2") else INK, pad=2.5)
         if r == 0:
-            axes[r, 0].set_title("MRI + truth", fontsize=5.5, color=INK, pad=2)
+            axes[r, 0].set_title("Ground\ntruth", fontsize=6.0, linespacing=1.1, color=INK, pad=2.5)
     for ax in axes.flat:
         ax.set_xticks([]); ax.set_yticks([])
         for spine in ax.spines.values():
             spine.set_visible(False)
+    handles = [Line2D([], [], color=truth_colour, lw=1.4, label="ground truth"),
+               Patch(fc=fp, label="false positive"), Patch(fc=fn, label="false negative")]
+    fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=5.6, frameon=False, handlelength=1.1,
+               handletextpad=0.4, columnspacing=0.9, bbox_to_anchor=(0.53, -0.01))
     save(fig, "fig_qualitative_pseudo_labels")
+    paper = ROOT / "paper_isbi2027" / "figures"
+    for suffix in ("png", "pdf"):
+        shutil.copy(OUT / f"fig_qualitative_pseudo_labels.{suffix}", paper / f"fig_qualitative_pseudo_labels.{suffix}")
 
 
 def main():
